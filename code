@@ -1,0 +1,54 @@
+import gradio as gr
+
+def respond(message, history, system_prompt, temperature):
+    messages = [{"role": "system", "content": system_prompt}]
+
+    for turn in history:
+        messages.append({"role": turn["role"], "content": turn["content"]})
+
+    messages.append({"role": "user", "content": message})
+
+    stream = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=messages,
+        temperature=temperature,
+        stream=True,
+    )
+
+    partial_message = ""
+    for chunk in stream:
+        if chunk.choices[0].delta.content:
+            partial_message += chunk.choices[0].delta.content
+            yield partial_message
+
+with gr.Blocks() as demo:
+    gr.Markdown("# ⚽ Football Expert Chatbot")
+
+    with gr.Row():
+        with gr.Column(scale=1):
+            system_prompt = gr.Textbox(
+                value="You are a football expert.",
+                label="System Prompt",
+                lines=3
+            )
+            temperature = gr.Slider(
+                minimum=0.0,
+                maximum=1.0,
+                value=0.4,
+                step=0.1,
+                label="Temperature (Randomness)"
+            )
+
+        with gr.Column(scale=3):
+            chatbot = gr.Chatbot(type="messages")
+            msg = gr.Textbox(label="Message")
+
+            chat_interface = gr.ChatInterface(
+                fn=respond,
+                chatbot=chatbot,
+                textbox=msg,
+                additional_inputs=[system_prompt, temperature],
+                type="messages"
+            )
+
+demo.launch(debug=True)
